@@ -24,7 +24,7 @@ struct MacInputEditor: View {
             
             TextEditor(text: $prompt)
                 .focused($isFocused)
-                .frame(maxHeight: 400)
+                .frame(minHeight:18, maxHeight: 400)
                 .fixedSize(horizontal: false, vertical: true)
                 .scrollContentBackground(.hidden)
                 .padding(6)

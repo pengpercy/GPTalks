@@ -65,7 +65,7 @@ struct ConversationMenu: View {
     @ViewBuilder
     var editGroup: some View {
         if !isQuick && group.role == .user {
-            HoverScaleButton(icon: "pencil.and.outline", label: "Edit") {
+            HoverScaleButton(icon: "pencil", label: "Edit") {
                 group.setupEditing()
             }
             .help("Edit")
@@ -101,7 +101,7 @@ struct ConversationMenu: View {
     }
 
     var copyText: some View {
-        HoverScaleButton(icon: isCopied ? "checkmark" : "paperclip", label: "Copy Text") {
+        HoverScaleButton(icon: isCopied ? "checkmark" : "square.on.square", label: "Copy Text") {
             group.activeConversation.content.copyToPasteboard()
             
             isCopied = true
@@ -122,7 +122,7 @@ struct ConversationMenu: View {
     }
 
     var deleteGroup: some View {
-        HoverScaleButton(icon: "minus.circle", label: "Delete") {
+        HoverScaleButton(icon: "trash", label: "Delete") {
             group.deleteSelf()
         }
     }
