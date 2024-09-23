@@ -87,7 +87,7 @@ struct ConversationMenu: View {
     }
 
     var resetContext: some View {
-        HoverScaleButton(icon: "eraser", label: "Reset Context") {
+        HoverScaleButton(icon: "rectangle.compress.vertical", label: "Reset Context") {
             group.resetContext()
         }
     }
