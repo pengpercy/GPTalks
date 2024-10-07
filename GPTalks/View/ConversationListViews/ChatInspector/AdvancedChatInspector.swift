@@ -8,11 +8,10 @@
 import SwiftUI
 
 struct AdvancedChatInspector: View {
-    @Bindable var session: Session
+    @Bindable var session: ChatSession
     
     @State private var isExportingJSON = false
     @State private var isExportingMarkdown = false
-    
     
     var body: some View {
         Form {
@@ -33,6 +32,8 @@ struct AdvancedChatInspector: View {
                     Label("JSON", systemImage: "ellipsis.curlybraces")
                 }
                 .sessionExporter(isExporting: $isExportingJSON, sessions: [session])
+                .buttonStyle(ExternalLinkButtonStyle())
+                .foregroundStyle(.accent)
                 
                 Button {
                     isExportingMarkdown = true
@@ -40,6 +41,8 @@ struct AdvancedChatInspector: View {
                     Label("Markdown", systemImage: "richtext.page")
                 }
                 .markdownSessionExporter(isExporting: $isExportingMarkdown, session: session)
+                .buttonStyle(ExternalLinkButtonStyle())
+                .foregroundStyle(.accent)
             }
         }
         .formStyle(.grouped)

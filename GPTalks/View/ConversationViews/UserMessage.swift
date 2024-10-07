@@ -9,10 +9,10 @@ import SwiftUI
 
 struct UserMessage: View {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(ChatSessionVM.self) private var sessionVM
     @ObservedObject var config = AppConfig.shared
     
     @Bindable var conversation: Conversation
-    var providers: [Provider]
     @State var isHovered: Bool = false
     @State var isExpanded: Bool = false
     @State var showingTextSelection = false
@@ -20,10 +20,13 @@ struct UserMessage: View {
     var body: some View {
         VStack(alignment: .trailing, spacing: 7) {
             if !conversation.dataFiles.isEmpty {
-                DataFileView(dataFiles: $conversation.dataFiles, isCrossable: false)
+                DataFileView(dataFiles: $conversation.dataFiles, isCrossable: false, edge: .trailing)
             }
             
-            HighlightedText(text: conversation.content, highlightedText: conversation.group?.session?.searchText.count ?? 0 > 3 ? conversation.group?.session?.searchText : nil)
+            HighlightedText(text: conversation.content, highlightedText: sessionVM.searchText.count > 3 ? sessionVM.searchText : nil)
+                #if os(macOS)
+                .lineSpacing(2)
+                #endif
                 .font(.system(size: config.fontSize))
                 .lineLimit(!isExpanded ? lineLimit : nil)
                 .padding(.vertical, 8)
@@ -39,17 +42,14 @@ struct UserMessage: View {
                 )
             
     #if os(macOS)
-            if let group = conversation.group {
-                ConversationMenu(group: group, providers: providers, isExpanded: $isExpanded)
-                    .symbolEffect(.appear, isActive: !isHovered)
-            }
+            contextMenu
     #endif
         }
         .padding(.leading, leadingPadding)
         #if !os(macOS)
         .contextMenu {
             if let group = conversation.group {
-                ConversationMenu(group: group, providers: providers, isExpanded: $isExpanded, toggleTextSelection: toggleTextSelection)
+                ConversationMenu(group: group, isExpanded: $isExpanded, toggleTextSelection: toggleTextSelection)
             }
         } preview: {
             Text("User Message")
@@ -64,6 +64,14 @@ struct UserMessage: View {
         }
         #endif
         .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+    
+    @ViewBuilder
+    var contextMenu: some View {
+        if let group = conversation.group {
+            ConversationMenu(group: group, isExpanded: $isExpanded)
+                .symbolEffect(.appear, isActive: !isHovered)
+        }
     }
     
     func toggleTextSelection() {
@@ -96,10 +104,6 @@ struct UserMessage: View {
 }
 
 #Preview {
-    let providers: [Provider] = []
-    let conversation = Conversation(
-        role: .user, content: "Hello, World! who are you and how are you")
-
-    UserMessage(conversation: conversation, providers: providers)
+    UserMessage(conversation: .mockUserConversation)
         .frame(width: 500, height: 300)
 }

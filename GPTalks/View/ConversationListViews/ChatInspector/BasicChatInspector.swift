@@ -6,12 +6,16 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct BasicChatInspector: View {
-    @Bindable var session: Session
+    @Bindable var session: ChatSession
+    
+    @Query(filter: #Predicate { $0.isEnabled }, sort: [SortDescriptor(\Provider.order, order: .forward)])
     var providers: [Provider]
     
     @State var isGeneratingTtile: Bool = false
+    @State var showingDeleteConfirmation: Bool = false
     
     var body: some View {
         Form {
@@ -31,7 +35,8 @@ struct BasicChatInspector: View {
                         session.config.model = newProvider.chatModel
                     }
                 )
-                ModelPicker(model: $session.config.model, models: session.config.provider.chatModels, label: "Model")
+                
+                ChatModelPicker(model: $session.config.model, models: session.config.provider.chatModels, label: "Model")
             }
             
             Section("Basic") {
@@ -44,8 +49,11 @@ struct BasicChatInspector: View {
                 sysPrompt
             }
             
-            deleteAllMessages
-                .buttonStyle(.plain)
+            Section("") {
+                resetContext
+                
+                deleteAllMessages
+            }
         }
         .formStyle(.grouped)
     }
@@ -58,7 +66,11 @@ struct BasicChatInspector: View {
     
     private var sysPrompt: some View {
         TextField("System Prompt", text: $session.config.systemPrompt, axis: .vertical)
+            #if os(macOS)
+            .lineLimit(7, reservesSpace: true)
+            #else
             .lineLimit(5, reservesSpace: true)
+            #endif
             .labelsHidden()
     }
     
@@ -78,15 +90,34 @@ struct BasicChatInspector: View {
         .foregroundStyle(.mint.gradient)
     }
     
+    private var resetContext: some View {
+        Button {
+            if session.isStreaming { return }
+            if let last = session.groups.last {
+                session.resetContext(at: last)
+            }
+        } label: {
+            Text("Reset Context")
+        }
+        .foregroundStyle(.orange)
+        .buttonStyle(ExternalLinkButtonStyle())
+    }
+    
     private var deleteAllMessages: some View {
         Button(role: .destructive) {
             if session.isStreaming { return }
             
-            session.deleteAllConversations()
+            showingDeleteConfirmation.toggle()
         } label: {
             Text("Delete All Messages")
-                .frame(maxWidth: .infinity, alignment: .center)
         }
         .foregroundStyle(.red)
+        .buttonStyle(ExternalLinkButtonStyle())
+        .confirmationDialog("Are you sure you want to delete all messages?", isPresented: $showingDeleteConfirmation) {
+            Button("Delete All", role: .destructive) {
+                session.deleteAllConversations()
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 }

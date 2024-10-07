@@ -11,10 +11,10 @@ import UniformTypeIdentifiers
 
 struct ChatInputView: View {
     @Environment(\.colorScheme) var colorScheme
-    @Bindable var session: Session
+    @Bindable var session: ChatSession
     
     @State private var isFilePickerPresented: Bool = false
-    @State private var showCamera = false
+//    @State private var showCamera = false
     @State private var showPhotosPicker = false
     @State private var selectedPhotos = [PhotosPickerItem]()
     
@@ -35,7 +35,7 @@ struct ChatInputView: View {
             
             VStack(alignment: .leading, spacing: 5) {
                 if !session.inputManager.dataFiles.isEmpty {
-                    DataFileView(dataFiles: $session.inputManager.dataFiles, isCrossable: true)
+                    DataFileView(dataFiles: $session.inputManager.dataFiles, isCrossable: true, edge: .leading)
                 }
                 
                 InputEditor(prompt: $session.inputManager.prompt,
@@ -79,7 +79,7 @@ struct ChatInputView: View {
             }
             
             Button {
-                self.showCamera.toggle()
+                session.showCamera.toggle()
             } label: {
                 Label("Open Camera", systemImage: "camera")
             }
@@ -98,7 +98,7 @@ struct ChatInputView: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .accentColor(.primary)
-        .fullScreenCover(isPresented: $showCamera) {
+        .fullScreenCover(isPresented: $session.showCamera) {
             CameraView { typedData in
                 session.inputManager.dataFiles.append(typedData)
             }
@@ -111,6 +111,9 @@ struct ChatInputView: View {
         .onChange(of: selectedPhotos) {
             Task {
                 await loadTransferredPhotos(from: selectedPhotos)
+                DispatchQueue.main.async {
+                    selectedPhotos.removeAll()
+                }
             }
         }
     }
@@ -142,7 +145,7 @@ struct ChatInputView: View {
         #if !os(macOS)
         isFocused = false
         #endif
-        Task {
+        Task { @MainActor in
             await session.sendInput()
         }
     }
@@ -171,11 +174,6 @@ struct ChatInputView: View {
 }
 
 #Preview {
-    let config = SessionConfig()
-    let session = Session(config: config)
-    
-    session.inputManager.prompt = "Hello, World"
-    
-    return ChatInputView(session: session)
+    ChatInputView(session: .mockChatSession)
         .padding()
 }

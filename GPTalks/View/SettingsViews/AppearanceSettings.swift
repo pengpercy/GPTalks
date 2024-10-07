@@ -6,10 +6,13 @@
 //
 
 import SwiftUI
-import MarkdownWebView
+import SwiftData
 
 struct AppearanceSettings: View {
+    @Environment(\.modelContext) var modelContext
     @ObservedObject var config = AppConfig.shared
+    
+    @State var session: ChatSession?
 
     var body: some View {
         Form {
@@ -28,56 +31,68 @@ struct AppearanceSettings: View {
                         .monospacedDigit()
                 }
             }
+            
+//            Section("Status Bar") {
+//                Toggle("Show Status Bar", isOn: $config.showStatusBar)
+//            }
 
             Section("View Customisation") {
                 Toggle("Compact List Row", isOn: $config.compactList)
+                    .onAppear {
+                        fetchSession()
+                    }
                 
-                #if os(macOS)
-                VStack(alignment: .leading) {
-                    Picker("ConversationList Style", selection: $config.conversationListStyle) {
-                        ForEach(ConversationListStyle.allCases, id: \.self) { style in
-                            Text(style.rawValue)
+                    if let session = session {
+                        HStack {
+                            Text("Demo")
+                            
+                            Spacer()
+                            
+                            GroupBox {
+                                SessionListRow(session: session)
+                                    .padding(6)
+                            }
+                            .frame(maxWidth: 220)
                         }
                     }
-//                    .pickerStyle(.radioGroup)
-                    
-                    Text("ListView is smoother but some features may not function.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+
+                #if os(macOS)
+                Picker(selection: $config.conversationListStyle) {
+                    ForEach(ConversationListStyle.allCases, id: \.self) { style in
+                        Text(style.rawValue)
+                    }
+                } label: {
+                    Text("ConversationList Style")
+                    Text("List View is smoother but some features may not function.")
                 }
+                .pickerStyle(.radioGroup)
                 #endif
-
-                ToggleWithDescription(
-                    title: "Folder View",
-                    isOn: $config.folderView,
-                    description: "Folder View is Experimental and extremely buggy"
-                )
             }
-
-            Section {
+            
+            Section("List Truncation") {
                 Toggle("Show Less Sessions", isOn: $config.truncateList)
 
-                Stepper(
-                    "List Count",
-                    value: Binding<Double>(
-                        get: { Double(config.listCount) },
-                        set: { config.listCount = Int($0) }
-                    ),
-                    in: 6...20,
-                    step: 1,
-                    format: .number
-                )
+                IntegerStepper(value: $config.listCount, label: "List Count", step: 1, range: 6...20)
                 .opacity(config.truncateList ? 1 : 0.5)
                 .disabled(!config.truncateList)
-            } header: {
-                Text("List Row Count")
-            } footer: {
-                SectionFooterView(text: "Only applicable when NOT using folder view")
             }
         }
         .formStyle(.grouped)
         .navigationTitle("Appearance")
         .toolbarTitleDisplayMode(.inline)
+    }
+    
+    private func fetchSession() {
+        var descriptor = FetchDescriptor<ChatSession>()
+        
+        descriptor.fetchLimit = 1
+        
+        do {
+            let sessions = try modelContext.fetch(descriptor)
+            session = sessions.first
+        } catch {
+            print("Error fetching quick session: \(error)")
+        }
     }
 }
 

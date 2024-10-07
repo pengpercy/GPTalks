@@ -44,7 +44,7 @@ struct ProviderGeneral: View {
                 }
                 
                 if provider.type == .vertex {
-                    SignInView()
+                    GoogleSignIn()
                 } else {
                     HStack {
                         if showKey {
@@ -71,37 +71,34 @@ struct ProviderGeneral: View {
             }
     
             Section("Default Models") {
-                ModelPicker(model: $provider.chatModel, models: provider.chatModels, label: "Chat Model")
+                ChatModelPicker(model: $provider.chatModel, models: provider.chatModels, label: "Chat Model")
                 
-                #if os(macOS)
-                ModelPicker(model: $provider.quickChatModel, models: provider.chatModels, label: "Quick Model")
-                #endif
-                
-                ModelPicker(model: $provider.titleModel, models: provider.chatModels, label: "Title Model")
-                
-                if provider.supportsImage {
-                    ModelPicker(model: $provider.imageModel, models: provider.imageModels, label: "Image Model")
-                }
+                ChatModelPicker(model: $provider.titleModel, models: provider.chatModels, label: "Title Model")
             }
 
             Section("Customisation") {
                 HStack {
-                    ColorPicker("Accent Color", selection: $color)
-                        .task {
-                            color = Color(hex: provider.color)
-                        }
-                        .onChange(of: color) {
-                            provider.color = color.toHex()
-                        }
-
+                    Text("Accent Color")
+                    
                     Button {
                         color = Color.getRandomColor()
                     } label: {
-                        Image(systemName: "die.face.2")
+                        Image(systemName: "die.face.5")
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
                     .rotationEffect(.degrees(45))
+                    
+                    Spacer()
+                    
+                    ColorPicker("Accent Color", selection: $color)
+                        .labelsHidden()
+                }
+                .task {
+                    color = Color(hex: provider.color)
+                }
+                .onChange(of: color) {
+                    provider.color = color.toHex()
                 }
             }
         }
@@ -169,7 +166,7 @@ struct ProviderGeneral: View {
     private var popoverText: String {
         switch provider.type {
         case .vertex:
-            "Put in your Google Cloud Project ID.\nOnly anthropic models are supported.\nMake sure to enable Vertex AI Api in GCloud Console and enable Anthropic models."
+            "Put in your Google Cloud Project ID.\nOnly Anthropic models are supported.\nMake sure to enable Vertex AI Api in GCloud Console and enable Anthropic models."
         case .openai, .google, .anthropic, .local:
             "Omit https:// and /v1/ from the URL.\nFor example: api.openai.com"
         }
@@ -177,9 +174,7 @@ struct ProviderGeneral: View {
 }
 
 #Preview {
-    let provider = Provider.factory(type: .openai)
-
-    return ProviderGeneral(provider: provider) {}
+    return ProviderGeneral(provider: .openAIProvider) {}
         .padding()
         .frame(width: 500, height: 600)
 }

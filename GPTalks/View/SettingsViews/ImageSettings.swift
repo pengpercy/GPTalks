@@ -7,7 +7,7 @@
 
 import SwiftUI
 import SwiftData
-import OpenAI
+import SwiftOpenAI
 
 struct ImageSettings: View {
     @ObservedObject var imageConfig = ImageConfigDefaults.shared
@@ -15,9 +15,7 @@ struct ImageSettings: View {
     
     @Query(filter: #Predicate { $0.isEnabled && $0.supportsImage}, sort: [SortDescriptor(\Provider.order, order: .forward)])
     var providers: [Provider]
-    
-//    @State private var selectedProviderId: String?
-    
+
     private var providerBinding: Binding<Provider?> {
         Binding<Provider?>(
             get: {
@@ -33,7 +31,7 @@ struct ImageSettings: View {
     
     var body: some View {
         Form {
-            Section("Defaults") {
+            Section {
                 Picker("Provider", selection: providerBinding) {
                     ForEach(providers) { provider in
                         Text(provider.name).tag(provider)
@@ -41,53 +39,23 @@ struct ImageSettings: View {
                 }
                 
                 if let provider = providerBinding.wrappedValue {
-                    VStack(alignment: .leading) {
-                        Picker("Model", selection: Binding(
-                            get: { provider.imageModel },
-                            set: { newValue in
-                                if let index = providers.firstIndex(where: { $0.id == provider.id }) {
-                                    providers[index].imageModel = newValue
-                                }
-                            }
-                        )) {
-                            ForEach(provider.imageModels) { model in
-                                Text(model.name).tag(model)
+                    Picker("Model", selection: Binding(
+                        get: { provider.imageModel },
+                        set: { newValue in
+                            if let index = providers.firstIndex(where: { $0.id == provider.id }) {
+                                providers[index].imageModel = newValue
                             }
                         }
-                        
-                        Text("Will also be set as provider's default image model")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    )) {
+                        ForEach(provider.imageModels) { model in
+                            Text(model.name).tag(model)
+                        }
                     }
                 }
-            }
-            
-            Section {
-                Stepper(
-                    "Image Height",
-                    value: Binding<Double>(
-                        get: { Double(imageConfig.imageHeight) },
-                        set: { imageConfig.imageHeight = Int($0) }
-                    ),
-                    in: 40...300,
-                    step: 30,
-                    format: .number
-                )
-                
-                Stepper(
-                    "Generation Width",
-                    value: Binding<Double>(
-                        get: { Double(imageConfig.imageWidth) },
-                        set: { imageConfig.imageWidth = Int($0) }
-                    ),
-                    in: 80...300,
-                    step: 30,
-                    format: .number
-                )
             } header: {
-                Text("Size")
+                Text("Defaults")
             } footer: {
-                SectionFooterView(text: "Recommend sticking with width: 100 and height: 48")
+                SectionFooterView(text: "Check Plugin Settings to configure models for plugin generations")
             }
             
             Section(header: Text("Default Parameters")) {
@@ -104,21 +72,45 @@ struct ImageSettings: View {
 
                 
                 Picker("Size", selection: $imageConfig.size) {
-                    ForEach(ImagesQuery.Size.allCases, id: \.self) { size in
-                        Text(size.rawValue)
+                    ForEach(ImageCreateParameters.ImageSize.allCases, id: \.self) { size in
+                        Text(size.rawValue).tag(size)
                     }
                 }
+            }
+            
+            Section("Chat Image Size") {
+                IntegerStepper(value: $imageConfig.chatImageHeight, label: "Image Height", step: 30, range: 40...300)
                 
-                Picker("Quality", selection: $imageConfig.quality) {
-                    ForEach(ImagesQuery.Quality.allCases, id: \.self) { quality in
-                        Text(quality.rawValue.uppercased())
-                    }
+                IntegerStepper(value: $imageConfig.chatImageWidth, label: "Image Width", step: 30, range: 80...300)
+                
+                HStack(alignment: .top) {
+                    Text("Only applies to images in Chat Session")
+                    
+                    Spacer()
+                    
+                    Image("sample")
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: CGFloat(imageConfig.chatImageWidth), height: CGFloat(imageConfig.chatImageHeight))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
+            }
+            
+            Section("Generation Image Size") {
+                IntegerStepper(value: $imageConfig.imageHeight, label: "Image Height", step: 50, range: 50...500)
                 
-                Picker("Style", selection: $imageConfig.style) {
-                    ForEach(ImagesQuery.Style.allCases, id: \.self) { style in
-                        Text(style.rawValue.capitalized)
-                    }
+                IntegerStepper(value: $imageConfig.imageWidth, label: "Image Width", step: 50, range: 50...500)
+                
+                HStack(alignment: .top) {
+                    Text("Only applies to images from Image Generation Session")
+                    
+                    Spacer()
+                    
+                    Image("sample")
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: CGFloat(imageConfig.imageWidth), height: CGFloat(imageConfig.imageHeight))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
             }
         }

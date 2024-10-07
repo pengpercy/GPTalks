@@ -8,46 +8,47 @@
 import SwiftUI
 
 struct ConversationListToolbar: ToolbarContent {
-    @Bindable var session: Session
-    var providers: [Provider]
+    @Environment(ChatSessionVM.self) private var sessionVM
+    @Bindable var session: ChatSession
     
-    @State var showConfig: Bool = false
     @State var showingInspector: Bool = false
-    
-    @State private var currentIndex: Int = 0
-    var filteredGroups: [ConversationGroup] {
-        if session.searchText.count < 4 {
-            return []
-        }
-        return session.groups.filter { group in
-            group.activeConversation.content.localizedCaseInsensitiveContains(session.searchText)
-        }
-    }
-    
+    @State var showingShortcuts = false
+
     var body: some ToolbarContent {
-        ToolbarItem {
-            Color.clear
-                .sheet(isPresented: $showingInspector) {
-                    ChatInspector(session: session, providers: providers)
-                }
-        }
-        
         #if os(macOS)
         ToolbarItem(placement: .navigation) {
             Button {
-                toggleInspector()
+//                toggleInspector()
+                showingShortcuts.toggle()
             } label: {
-                Label("Actions", systemImage: "slider.vertical.3")
+                Label("Shortcuts", systemImage: "slider.vertical.3")
+            }
+            .keyboardShortcut(".")
+            .popover(isPresented: $showingShortcuts) {
+                ConversationShortcuts()
             }
         }
         
-        if !session.searchText.isEmpty && !filteredGroups.isEmpty {
-            ToolbarItem {
-                navigateButtons
-            }
+        ToolbarItem {
+            Text("Tokens: \(session.tokenCount.formatToK())")
+                .foregroundStyle(.secondary)
         }
         #else
-        showInspector
+        ToolbarItem {
+            Color.clear
+                .sheet(isPresented: $showingInspector) {
+                    ChatInspector(session: session, showingInspector: $showingInspector)
+                }
+        }
+        
+        ToolbarItem {
+            Button {
+                toggleInspector()
+            } label: {
+                Label("Show Inspector", systemImage: "info.circle")
+            }
+            .keyboardShortcut(".")
+        }
         #endif
     }
     
@@ -62,43 +63,6 @@ struct ConversationListToolbar: ToolbarContent {
         }
     }
     
-    private var navigateButtons: some View {
-        HStack(spacing: 2) {
-            Button(action: {
-                navigateToGroup(direction: .backward)
-            }) {
-                Image(systemName: "chevron.left")
-            }
-            .disabled(currentIndex == 0)
-            
-            Button(action: {
-                navigateToGroup(direction: .forward)
-            }) {
-                Image(systemName: "chevron.right")
-            }
-            .disabled(currentIndex == filteredGroups.count - 1)
-        }
-    }
-    
-    private func navigateToGroup(direction: NavigationDirection) {
-        switch direction {
-        case .forward:
-            if currentIndex < filteredGroups.count - 1 {
-                currentIndex += 1
-            }
-        case .backward:
-            if currentIndex > 0 {
-                currentIndex -= 1
-            }
-        }
-        
-        if let group = filteredGroups[safe: currentIndex] {
-            withAnimation {
-                session.proxy?.scrollTo(group, anchor: .top)
-            }
-        }
-    }
-    
     private func toggleInspector() {
         #if !os(macOS)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -107,20 +71,14 @@ struct ConversationListToolbar: ToolbarContent {
     }
 }
 
-enum NavigationDirection {
-    case forward
-    case backward
-}
-
 #Preview {
     @Previewable @State var showingSearchField = false
-    let session = Session(config: SessionConfig())
-    
+
     VStack {
         Text("Hello, World!")
     }
     .frame(width: 700, height: 300)
     .toolbar {
-        ConversationListToolbar(session: session, providers: [])
+        ConversationListToolbar(session: .mockChatSession)
     }
 }
